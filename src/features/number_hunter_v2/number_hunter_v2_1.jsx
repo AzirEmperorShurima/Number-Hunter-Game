@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 
-const NUMBER_HUNTER_V2 = () => {
+const NUMBER_HUNTER_V2_1 = () => {
   const [targetPoints, setTargetPoints] = useState(2000);
   const [gameState, setGameState] = useState("setup"); // 'setup', 'playing', 'gameOver', 'allCleared'
   const [bubbles, setBubbles] = useState([]);
@@ -15,6 +15,79 @@ const NUMBER_HUNTER_V2 = () => {
   const gameAreaRef = useRef(null);
   const [gameAreaSize, setGameAreaSize] = useState({ width: 600, height: 400 });
 
+  // Tối ưu hóa rendering - dynamic bubble count
+  const [maxVisibleBubbles, setMaxVisibleBubbles] = useState(50);
+  const [remainingNumbers, setRemainingNumbers] = useState([]); // Numbers còn lại chưa được tạo bubble
+
+  // Refs để lưu trữ timeouts và intervals - QUAN TRỌNG ĐỂ FIX BUG
+  const timeoutsRef = useRef(new Set());
+  const intervalsRef = useRef(new Set());
+
+  // Helper function để add timeout và track nó
+  const addTimeout = useCallback((callback, delay) => {
+    const timeoutId = setTimeout(() => {
+      timeoutsRef.current.delete(timeoutId);
+      callback();
+    }, delay);
+    timeoutsRef.current.add(timeoutId);
+    return timeoutId;
+  }, []);
+
+  // Helper function để add interval và track nó
+  const addInterval = useCallback((callback, delay) => {
+    const intervalId = setInterval(callback, delay);
+    intervalsRef.current.add(intervalId);
+    return intervalId;
+  }, []);
+
+  // Clear tất cả timeouts và intervals
+  const clearAllTimeoutsAndIntervals = useCallback(() => {
+    // Clear all timeouts
+    timeoutsRef.current.forEach((timeoutId) => {
+      clearTimeout(timeoutId);
+    });
+    timeoutsRef.current.clear();
+
+    // Clear all intervals
+    intervalsRef.current.forEach((intervalId) => {
+      clearInterval(intervalId);
+    });
+    intervalsRef.current.clear();
+  }, []);
+
+  // Tính toán số bubble tối ưu - HIỂN THỊ NHIỀU HỠN VÀ ƯU TIÊN SỐ NHỎ
+  const calculateOptimalBubbleCount = useCallback((points, screenArea) => {
+    // Tính toán dựa trên diện tích màn hình với overlap được phép
+    const bubbleArea = 40 * 40; // Bubble size trung bình
+    const overlapFactor = 0.8; // Cho phép overlap 80%
+    const maxByScreen = Math.floor(screenArea / (bubbleArea * overlapFactor));
+
+    let targetBubbleCount;
+
+    if (points <= 100) {
+      // Dưới 100: hiển thị tất cả
+      targetBubbleCount = points;
+    } else if (points <= 500) {
+      // 100-500: hiển thị tất cả, tối thiểu 500 bubbles
+      targetBubbleCount = points;
+    } else if (points <= 1000) {
+      // 500-1000: hiển thị ít nhất 500 bubbles đầu tiên
+      targetBubbleCount = Math.max(500, Math.min(points, 600));
+    } else if (points <= 2000) {
+      // 1000-2000: hiển thị ít nhất 500-700 bubbles đầu tiên
+      targetBubbleCount = Math.max(500, Math.min(points, 700));
+    } else if (points <= 5000) {
+      // 2000-5000: hiển thị 700-800 bubbles
+      targetBubbleCount = Math.max(700, Math.min(points, 800));
+    } else {
+      // Trên 5000: hiển thị 800-1000 bubbles
+      targetBubbleCount = Math.max(800, Math.min(points, 1000));
+    }
+
+    // Đảm bảo không vượt quá khả năng hiển thị của màn hình
+    return Math.min(targetBubbleCount, maxByScreen, 1000);
+  }, []);
+
   // Update game area size based on screen size
   useEffect(() => {
     const updateGameAreaSize = () => {
@@ -28,84 +101,123 @@ const NUMBER_HUNTER_V2 = () => {
         const height = Math.max(minHeight, containerHeight);
 
         setGameAreaSize({ width, height });
+
+        const screenArea = width * height;
+        const optimalCount = calculateOptimalBubbleCount(
+          targetPoints,
+          screenArea
+        );
+        setMaxVisibleBubbles(optimalCount);
       }
     };
 
     updateGameAreaSize();
     window.addEventListener("resize", updateGameAreaSize);
     return () => window.removeEventListener("resize", updateGameAreaSize);
-  }, []);
+  }, [targetPoints, calculateOptimalBubbleCount]);
 
-  // Generate bubbles with exact count and proper z-index management
-  const generateBubbles = useCallback(
-    (maxNumber) => {
-      const bubbleData = [];
+  // Tạo bubble với vị trí ngẫu nhiên
+  const createBubble = useCallback(
+    (number, id) => {
       const bubbleSize = Math.max(25, Math.min(45, gameAreaSize.width / 18));
 
-      // Create exactly maxNumber bubbles (one for each number from 1 to maxNumber)
-      const numbers = [];
-      for (let i = 1; i <= maxNumber; i++) {
-        numbers.push(i);
-      }
-
-      // Shuffle the numbers to randomize their initial positions
-      for (let i = numbers.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [numbers[i], numbers[j]] = [numbers[j], numbers[i]];
-      }
-
-      // Create bubbles with position collision avoidance
-      const positions = [];
-      const minDistance = bubbleSize + 3;
-
-      for (let i = 0; i < maxNumber; i++) {
-        let attempts = 0;
-        let validPosition = false;
-        let x, y;
-
-        // Try to find a position that doesn't overlap with existing bubbles
-        while (!validPosition && attempts < 50) {
-          x = Math.random() * (gameAreaSize.width - bubbleSize);
-          y = Math.random() * (gameAreaSize.height - bubbleSize);
-
-          validPosition = true;
-          for (const pos of positions) {
-            const distance = Math.sqrt((x - pos.x) ** 2 + (y - pos.y) ** 2);
-            if (distance < minDistance) {
-              validPosition = false;
-              break;
-            }
-          }
-          attempts++;
-        }
-
-        // If we can't find a non-overlapping position, just use the last generated position
-        if (!validPosition) {
-          x = Math.random() * (gameAreaSize.width - bubbleSize);
-          y = Math.random() * (gameAreaSize.height - bubbleSize);
-        }
-
-        positions.push({ x, y });
-
-        const bubble = {
-          id: i,
-          number: numbers[i],
-          x: x,
-          y: y,
-          size: bubbleSize,
-          hue: (numbers[i] * 137.5) % 360, // Golden angle for nice color distribution
-        };
-        bubbleData.push(bubble);
-      }
-
-      return bubbleData;
+      return {
+        id,
+        number,
+        x: Math.random() * (gameAreaSize.width - bubbleSize),
+        y: Math.random() * (gameAreaSize.height - bubbleSize),
+        size: bubbleSize,
+        hue: (number * 137.5) % 360,
+      };
     },
     [gameAreaSize]
   );
 
+  // Tạo danh sách số cần hiển thị ban đầu - ƯU TIÊN SỐ NHỎ TUYỆT ĐỐI
+  const generateInitialBubbles = useCallback(() => {
+    const numbersToShow = [];
+    const numbersToKeep = [];
+
+    // Luôn hiển thị các số nhỏ trước, bắt đầu từ currentTarget
+    let numberCount = 0;
+
+    // Thêm các số từ currentTarget trở đi cho đến khi đủ maxVisibleBubbles
+    for (
+      let i = currentTarget;
+      i <= targetPoints && numberCount < maxVisibleBubbles;
+      i++
+    ) {
+      numbersToShow.push(i);
+      numberCount++;
+    }
+
+    // Nếu vẫn chưa đủ và có thể thêm số từ đầu (nhỏ hơn currentTarget)
+    if (numberCount < maxVisibleBubbles && currentTarget > 1) {
+      for (
+        let i = 1;
+        i < currentTarget && numberCount < maxVisibleBubbles;
+        i++
+      ) {
+        numbersToShow.push(i);
+        numberCount++;
+      }
+    }
+
+    // Các số còn lại để dùng sau (những số lớn hơn)
+    for (let i = currentTarget + numberCount; i <= targetPoints; i++) {
+      if (!numbersToShow.includes(i)) {
+        numbersToKeep.push(i);
+      }
+    }
+
+    // Sort numbersToShow để đảm bảo thứ tự
+    numbersToShow.sort((a, b) => a - b);
+    numbersToKeep.sort((a, b) => a - b);
+
+    setRemainingNumbers(numbersToKeep);
+
+    // Tạo bubbles
+    const initialBubbles = numbersToShow.map((number, index) =>
+      createBubble(number, `bubble_${number}_${index}`)
+    );
+
+    console.log(
+      `Generated ${initialBubbles.length} bubbles for ${targetPoints} points`
+    );
+    console.log(
+      `Numbers: ${numbersToShow.slice(0, 20).join(", ")}${
+        numbersToShow.length > 20 ? "..." : ""
+      }`
+    );
+
+    return initialBubbles;
+  }, [currentTarget, targetPoints, maxVisibleBubbles, createBubble]);
+
+  // Cleanup khi component unmount
+  useEffect(() => {
+    return () => {
+      clearAllTimeoutsAndIntervals();
+    };
+  }, [clearAllTimeoutsAndIntervals]);
+  const getNextNumber = useCallback(() => {
+    if (remainingNumbers.length === 0) return null;
+
+    // Luôn lấy số nhỏ nhất có sẵn
+    const sortedNumbers = [...remainingNumbers].sort((a, b) => a - b);
+    const nextNumber = sortedNumbers[0];
+
+    // Remove từ remaining numbers
+    setRemainingNumbers((prev) => prev.filter((num) => num !== nextNumber));
+
+    return nextNumber;
+  }, [remainingNumbers]);
+
   const startGame = useCallback(() => {
-    const bubbleData = generateBubbles(targetPoints);
-    setBubbles(bubbleData);
+    // Clear all existing timeouts/intervals trước khi start
+    clearAllTimeoutsAndIntervals();
+
+    const initialBubbles = generateInitialBubbles();
+    setBubbles(initialBubbles);
     setCurrentTarget(1);
     setTime(0);
     setScore(0);
@@ -113,15 +225,18 @@ const NUMBER_HUNTER_V2 = () => {
     setClickedBubbles(new Set());
     setDisappearingBubbles(new Set());
     setClickTimes(new Map());
-    setNewBubbles(new Set(bubbleData.map((b) => b.id)));
+    setNewBubbles(new Set(initialBubbles.map((b) => b.id)));
 
     // Remove new bubble animation after delay
-    setTimeout(() => {
+    addTimeout(() => {
       setNewBubbles(new Set());
     }, 1000);
-  }, [targetPoints, generateBubbles]);
+  }, [generateInitialBubbles, clearAllTimeoutsAndIntervals, addTimeout]);
 
   const restartGame = useCallback(() => {
+    // QUAN TRỌNG: Clear tất cả timeouts/intervals khi restart
+    clearAllTimeoutsAndIntervals();
+
     setGameState("setup");
     setBubbles([]);
     setCurrentTarget(1);
@@ -131,23 +246,31 @@ const NUMBER_HUNTER_V2 = () => {
     setDisappearingBubbles(new Set());
     setNewBubbles(new Set());
     setClickTimes(new Map());
-  }, []);
+    setRemainingNumbers([]);
+    setAutoPlay(false); // Tắt auto play khi restart
+  }, [clearAllTimeoutsAndIntervals]);
 
   // Timer effect
   useEffect(() => {
     let interval;
     if (gameState === "playing") {
-      interval = setInterval(() => {
+      interval = addInterval(() => {
         setTime((prev) => prev + 0.1);
       }, 100);
     }
-    return () => clearInterval(interval);
-  }, [gameState]);
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+        intervalsRef.current.delete(interval);
+      }
+    };
+  }, [gameState, addInterval]);
 
   // Auto play effect
   useEffect(() => {
+    let interval;
     if (autoPlay && gameState === "playing") {
-      const interval = setInterval(() => {
+      interval = addInterval(() => {
         const targetBubble = bubbles.find(
           (bubble) =>
             bubble.number === currentTarget &&
@@ -159,9 +282,14 @@ const NUMBER_HUNTER_V2 = () => {
           handleBubbleClick(targetBubble);
         }
       }, 300);
-
-      return () => clearInterval(interval);
     }
+
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+        intervalsRef.current.delete(interval);
+      }
+    };
   }, [
     autoPlay,
     gameState,
@@ -169,6 +297,7 @@ const NUMBER_HUNTER_V2 = () => {
     currentTarget,
     clickedBubbles,
     disappearingBubbles,
+    addInterval,
   ]);
 
   const handleBubbleClick = (bubble) => {
@@ -189,14 +318,41 @@ const NUMBER_HUNTER_V2 = () => {
       );
       setScore((prev) => prev + bubble.number);
 
-      // Remove bubble after animation (increased time to show time)
-      setTimeout(() => {
+      // Remove bubble after animation - SỬ DỤNG addTimeout ĐỂ TRACK
+      addTimeout(() => {
         setDisappearingBubbles((prev) => {
           const newSet = new Set(prev);
           newSet.delete(bubble.id);
           return newSet;
         });
-        setBubbles((prev) => prev.filter((b) => b.id !== bubble.id));
+
+        setBubbles((prev) => {
+          const filtered = prev.filter((b) => b.id !== bubble.id);
+
+          // Thêm bubble mới nếu có số available
+          const nextNumber = getNextNumber();
+          if (nextNumber !== null) {
+            const newBubble = createBubble(
+              nextNumber,
+              `bubble_${nextNumber}_${Date.now()}`
+            );
+            setNewBubbles((prevNew) => new Set([...prevNew, newBubble.id]));
+
+            // Remove new bubble animation - SỬ DỤNG addTimeout ĐỂ TRACK
+            addTimeout(() => {
+              setNewBubbles((prevNew) => {
+                const newSet = new Set(prevNew);
+                newSet.delete(newBubble.id);
+                return newSet;
+              });
+            }, 800);
+
+            return [...filtered, newBubble];
+          }
+
+          return filtered;
+        });
+
         setClickTimes((prev) => {
           const newMap = new Map(prev);
           newMap.delete(bubble.id);
@@ -205,7 +361,7 @@ const NUMBER_HUNTER_V2 = () => {
       }, 1200);
 
       if (currentTarget === targetPoints) {
-        setTimeout(() => {
+        addTimeout(() => {
           setGameState("allCleared");
         }, 1300);
       } else {
@@ -217,7 +373,7 @@ const NUMBER_HUNTER_V2 = () => {
       setClickTimes(
         (prev) => new Map([...prev, [bubble.id, formatTime(time)]])
       );
-      setTimeout(() => {
+      addTimeout(() => {
         setGameState("gameOver");
       }, 300);
     }
@@ -265,12 +421,13 @@ const NUMBER_HUNTER_V2 = () => {
       return `${baseFontSize}px`;
     };
 
-    // Priority z-index system: smaller numbers have higher z-index
+    // Z-index system: SỐ NHỎ HƠN CÓ Z-INDEX CAO HƠN (ở trên)
     const getZIndex = () => {
-      if (isClicked) return 50000 + (20000 - bubble.number);
-      if (isTarget && gameState === "playing")
-        return 40000 + (20000 - bubble.number);
-      return 20000 - bubble.number; // Smaller numbers get higher z-index
+      const baseZIndex = 100000 - bubble.number; // Số nhỏ hơn = z-index cao hơn
+
+      if (isClicked) return baseZIndex + 50000; // Clicked bubbles on top
+      if (isTarget && gameState === "playing") return baseZIndex + 30000; // Target bubbles high priority
+      return baseZIndex; // Normal bubbles: số 1 = 99999, số 10 = 99990, số 11 = 99989
     };
 
     const zIndex = getZIndex();
@@ -464,6 +621,22 @@ const NUMBER_HUNTER_V2 = () => {
               </>
             )}
           </div>
+
+          {/* Hiển thị thông tin chi tiết */}
+          {gameState === "playing" && (
+            <div className="mt-4 text-center">
+              <div className="text-white/70 text-sm">
+                Bubbles: {bubbles.length}/{maxVisibleBubbles} | Remaining:{" "}
+                {remainingNumbers.length}
+                <div className="mt-1">
+                  <span className="text-blue-300">🎯 Smart Display Mode</span>
+                  <span className="text-green-300 ml-4">
+                    📊 Priority: Small Numbers First
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Next Target Indicator */}
@@ -557,4 +730,4 @@ const NUMBER_HUNTER_V2 = () => {
   );
 };
 
-export default NUMBER_HUNTER_V2;
+export default NUMBER_HUNTER_V2_1;

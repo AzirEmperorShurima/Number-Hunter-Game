@@ -14,6 +14,12 @@ const BubblePoppingGame = lazy(() =>
 const NUMBER_HUNTER_V2 = lazy(() =>
   import("./features/number_hunter_v2/number_hunter_v2.jsx")
 );
+const NUMBER_HUNTER_V2_1 = lazy(() =>
+  import("./features/number_hunter_v2/number_hunter_v2_1.jsx")
+);
+const NUMBER_HUNTER_V3 = lazy(() =>
+  import("./features/number_hunter_v3/number_hunter_v3.jsx")
+);
 const NotFound = lazy(() => import("./components/errors/NotFound.jsx"));
 
 // Cấu hình router
@@ -54,6 +60,38 @@ const router = createBrowserRouter([
       </Suspense>
     ),
   },
+  {
+    path: "/number-hunter-v2.1",
+    element: (
+      <Suspense
+        fallback={
+          <LoadingComponent message="Loading Number Hunter Deluxe..." />
+        }
+      >
+        <NUMBER_HUNTER_V2_1 />
+      </Suspense>
+    ),
+  },
+  {
+    path: "/number-hunter-v3",
+    element: (
+      <Suspense
+        fallback={
+          <LoadingComponent message="Loading Number Hunter Deluxe..." />
+        }
+      >
+        <NUMBER_HUNTER_V3 />
+      </Suspense>
+    ),
+  },
+  // {
+  //   path: "/404", // fallback 404
+  //   element: (
+  //     <Suspense fallback={<LoadingComponent message="Loading Error Page..." />}>
+  //       <NotFound />
+  //     </Suspense>
+  //   ),
+  // },
   {
     path: "*", // fallback 404
     element: (
