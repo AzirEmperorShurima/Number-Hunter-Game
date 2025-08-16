@@ -74,7 +74,7 @@ const MainApp = () => {
       difficulty: "Beginner Friendly",
       stats: {
         version: "1.0",
-        released: "2025",
+        released: "2024",
       },
     },
     {
@@ -96,7 +96,7 @@ const MainApp = () => {
       difficulty: "Enhanced Experience",
       stats: {
         version: "2.0",
-        released: "2025",
+        released: "2024",
       },
     },
     {
@@ -126,7 +126,7 @@ const MainApp = () => {
     {
       id: "v3",
       title: "Number Hunter Ultimate",
-      subtitle: "Latest Version",
+      subtitle: "New Version",
       description:
         "The most advanced version featuring cutting-edge animations, spectacular visual effects, and revolutionary gameplay mechanics. Experience the future of bubble hunting!",
       path: "/number-hunter-v3",
@@ -144,10 +144,12 @@ const MainApp = () => {
         version: "3.0",
         released: "2025",
       },
+      isNew: true,
     },
   ];
 
   const handleGameSelect = (path) => {
+    // Add a small delay for visual feedback
     setTimeout(() => {
       window.location.href = path;
     }, 200);
@@ -226,13 +228,11 @@ const MainApp = () => {
                   {/* New/Optimized Badge */}
                   {(game.isNew || game.badge) && (
                     <div className="absolute -top-3 -right-3 z-20">
-                      <div
-                        className={`text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg animate-pulse ${
-                          game.badge === "OPTIMIZED"
-                            ? "bg-gradient-to-r from-orange-500 to-red-500"
-                            : "bg-gradient-to-r from-red-500 to-pink-500"
-                        }`}
-                      >
+                      <div className={`text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg animate-pulse ${
+                        game.badge === "OPTIMIZED" 
+                          ? "bg-gradient-to-r from-orange-500 to-red-500" 
+                          : "bg-gradient-to-r from-red-500 to-pink-500"
+                      }`}>
                         {game.badge || "NEW!"}
                       </div>
                     </div>
@@ -326,19 +326,16 @@ const MainApp = () => {
                   increasingly challenging levels. Can you clear all the numbers
                   without making a mistake?
                 </p>
-
+                
                 {/* New Performance Note */}
                 <div className="bg-orange-500/20 backdrop-blur-sm rounded-lg p-3 sm:p-4 mb-4 border border-orange-400/30">
                   <div className="flex items-center justify-center space-x-2 text-orange-200 font-semibold mb-2">
                     <span>⚡</span>
-                    <span className="text-sm sm:text-base">
-                      Performance Update!
-                    </span>
+                    <span className="text-sm sm:text-base">Performance Update!</span>
                   </div>
                   <p className="text-orange-100/80 text-xs sm:text-sm">
-                    Try the new Number Hunter Deluxe Pro v2.1 featuring
-                    intelligent rendering and advanced anti-lag technology for
-                    smooth gameplay even with massive datasets!
+                    Try the new Number Hunter Deluxe Pro v2.1 featuring intelligent rendering 
+                    and advanced anti-lag technology for smooth gameplay even with massive datasets!
                   </p>
                 </div>
 
@@ -356,13 +353,11 @@ const MainApp = () => {
               <div className="group relative inline-block">
                 <div className="absolute -inset-1 bg-gradient-to-r from-red-500 via-purple-500 to-pink-500 rounded-2xl blur opacity-30 group-hover:opacity-60 transition duration-1000 group-hover:duration-200 animate-pulse"></div>
                 <button
-                  onClick={() => handleGameSelect("/404")}
+                  onClick={() => handleGameSelect('/404')}
                   className="relative px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-gray-800 via-gray-900 to-black rounded-xl font-bold text-white transition-all duration-300 transform hover:scale-105 border border-red-500/30 shadow-2xl group-hover:shadow-red-500/30"
                 >
                   <div className="flex items-center space-x-3">
-                    <span className="text-2xl animate-spin group-hover:animate-bounce">
-                      💀
-                    </span>
+                    <span className="text-2xl animate-spin group-hover:animate-bounce">💀</span>
                     <div className="text-left">
                       <div className="text-lg font-bold bg-gradient-to-r from-red-400 to-pink-400 bg-clip-text text-transparent">
                         Secret Portal
@@ -371,33 +366,22 @@ const MainApp = () => {
                         Enter if you dare...
                       </div>
                     </div>
-                    <span className="text-xl group-hover:animate-pulse">
-                      🚪
-                    </span>
+                    <span className="text-xl group-hover:animate-pulse">🚪</span>
                   </div>
-
+                  
                   {/* Glitch Effect */}
                   <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                     <div className="absolute inset-0 bg-red-500/10 rounded-xl animate-ping"></div>
                   </div>
                 </button>
-
+                
                 {/* Floating particles around button */}
                 <div className="absolute -top-2 -left-2 w-2 h-2 bg-red-500 rounded-full opacity-0 group-hover:opacity-100 animate-ping"></div>
-                <div
-                  className="absolute -top-1 -right-3 w-1.5 h-1.5 bg-purple-500 rounded-full opacity-0 group-hover:opacity-100 animate-ping"
-                  style={{ animationDelay: "0.2s" }}
-                ></div>
-                <div
-                  className="absolute -bottom-2 -left-3 w-1 h-1 bg-pink-500 rounded-full opacity-0 group-hover:opacity-100 animate-ping"
-                  style={{ animationDelay: "0.4s" }}
-                ></div>
-                <div
-                  className="absolute -bottom-1 -right-2 w-2 h-2 bg-red-400 rounded-full opacity-0 group-hover:opacity-100 animate-ping"
-                  style={{ animationDelay: "0.6s" }}
-                ></div>
+                <div className="absolute -top-1 -right-3 w-1.5 h-1.5 bg-purple-500 rounded-full opacity-0 group-hover:opacity-100 animate-ping" style={{animationDelay: '0.2s'}}></div>
+                <div className="absolute -bottom-2 -left-3 w-1 h-1 bg-pink-500 rounded-full opacity-0 group-hover:opacity-100 animate-ping" style={{animationDelay: '0.4s'}}></div>
+                <div className="absolute -bottom-1 -right-2 w-2 h-2 bg-red-400 rounded-full opacity-0 group-hover:opacity-100 animate-ping" style={{animationDelay: '0.6s'}}></div>
               </div>
-
+              
               {/* Warning text */}
               <p className="mt-3 text-xs text-white/40 group-hover:text-red-300/60 transition-colors duration-300">
                 ⚠️ This leads to the mysterious 404 dimension
